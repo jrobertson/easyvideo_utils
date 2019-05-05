@@ -10,13 +10,13 @@ require 'c32'
 
 
 module CommandHelper
-
+  using ColouredText
+  
   def list(a=@commands)
 
     format_command = ->(s) do
       command, desc = s.split(/\s+#\s+/,2)
-      " %s %s %s" % ['*'.colorize(:blue), command, 
-                      desc.to_s.light_black]
+      " %s %s %s" % ['*'.blue, command, desc.to_s.light_black]
     end
 
     s = a.map {|x| format_command.call(x) }.join("\n")
