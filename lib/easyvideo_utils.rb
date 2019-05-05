@@ -3,10 +3,11 @@
 # file: easyvideo_utils.rb
 
 require 'c32'
+require 'subunit'
 
 
 # requirements:
-# `apt-get install mplayer ffmpeg vorbis-tools`
+# `apt-get install mplayer ffmpeg vorbis-tools`exiftool
 
 
 module CommandHelper
@@ -47,9 +48,9 @@ class EasyVideoUtils
 
 
   def initialize(vid_in=nil, vid_out='video.mp4', out: vid_out, 
-                 working_dir: '/tmp')
+                 working_dir: '/tmp', debug: false)
 
-    @file_in, @file_out, @working_dir = vid_in, out, working_dir
+    @file_in, @file_out, @working_dir, @debug = vid_in, out, working_dir, debug
 
   end
 
@@ -73,11 +74,31 @@ class EasyVideoUtils
     
   end
 
-  def capture_desktop()
+  def capture_desktop(show: false)
 
     command = "ffmpeg -video_size 1024x768 -framerate 25 -f x11grab -i " + 
     ":0.0+0,0 #{@file_out}"
     run command, show
+
+  end
+  
+  # Duration returned in seconds
+  #
+  def duration()
+    
+    s = `exiftool #{@file_in}`
+    puts 's: ' + s.inspect if @debug
+    r = s[/Duration.*(\d{1,2}:\d{2}:\d{2})/,1]
+
+    puts 'r: ' + r.inspect if @debug    
+    
+    if r then
+      a = r.split(':').map(&:to_i)
+      return Subunit.new(units={minutes:60, hours:60, seconds: 0}, a).to_i
+    end
+    
+    puts 'r: ' + r.inspect if @debug
+    s[/Duration.*: (\d+\.\d+) s/,1].to_f
 
   end
 
@@ -125,7 +146,7 @@ class EasyVideoUtils
 
   private
 
-  def run(command, show: false)
+  def run(command, show=false)
 
     if show then 
       command
