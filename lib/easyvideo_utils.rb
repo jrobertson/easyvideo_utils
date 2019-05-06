@@ -39,11 +39,16 @@ class EasyVideoUtils
 * concat # concatenate 2 or more videos
 * convert # alias for transcode
 * capture # capture the desktop at 1024x768
+* extract_images # Extracts images at 1 FPS by default
 * play # plays the video using mplayer
 * preview # plays the video using ffplay
 * record # alias for capture
+* remove_audio # removes the audio track from a video
+* remove_video # removes the video track from a video. Output file would be an mp3.
 * resize # resize to 720p
 * scale # alias for resize
+* slowdown # slows a viedo down. Defaults to x2 (half-speed)
+* speedup # speed a video up. Defaults to x2 (twice as fast)
 * transcode # converts 1 video format to another e.g. avi-> mp4
 * trim # trims the beginning and ending of a video in hms format e.g. 1m 3s
 ".strip.lines.map {|x| x[/(?<=\* ).*/]}.sort
@@ -52,7 +57,13 @@ class EasyVideoUtils
   def initialize(vid_in=nil, vid_out='video.mp4', out: vid_out, 
                  working_dir: '/tmp', debug: false)
 
-    @file_in, @file_out, @working_dir, @debug = vid_in, out, working_dir, debug
+    @file_out, @working_dir, @debug = out, working_dir, debug
+    
+    if vid_in.is_a? String then
+      @file_in = vid_in
+    elsif vid_in.is_a? Array
+      @files_in = vid_in
+    end
 
   end
 
@@ -90,7 +101,7 @@ class EasyVideoUtils
   # * Video must be of same format and codec
   # * Only video with no audio is currently supported
   #
-  def concat(files=[], show: false)
+  def concat(files=@files_in, show: false)
     
     inputs = files.map {|file| "-i #{file}"}.join(' ')
     filter = files.map.with_index {|file,i| "[%s:v]" % i}.join(' ')
@@ -123,6 +134,18 @@ class EasyVideoUtils
 
   end
 
+  # Extract images from the video
+  #
+  # switches used:
+  #
+  # -r – Set the frame rate. I.e the number of frames to be extracted into images per second.
+  # -f – Indicates the output format i.e image format in our case.
+  # 
+  def extract_images(show: false, ext: '.png', rate: 1)
+    command = "ffmpeg -i #{@file_in} -r #{rate} -f image2 image-%2d#{ext}"
+    run command, show
+  end
+
   def play(show: false)
     command = "mplayer #{@file_out}"
     run command, show
@@ -131,15 +154,59 @@ class EasyVideoUtils
   def preview(show: false)
     command = "ffplay #{@file_out}"
     run command, show
-  end  
+  end
+
+  def remove_audio(show: false)
+    command = "ffmpeg -i #{@file_in} -an #{@file_out}"
+    run command, show
+  end
+  
+  # removes the video track which leaves the audio track
+  # e.g. ffmpeg -i input.mp4 -vn output.mp3
+  #
+  def remove_video(show: false)
+    command = "ffmpeg -i #{@file_in} -vn #{@file_out}"
+    run command, show
+  end
 
   # Resize avi to 720p
   #
-  def resize(show: false)
-    `ffmpeg -i #{@file_in} -vf scale="720:-1" #{@file_out} -y`
+  def resize(scale='720', show: false)
+    command = "ffmpeg -i #{@file_in} -vf scale=\"#{scale}:-1\" #{@file_out} -y"
+    run command, show
   end
 
   alias scale resize
+  
+  # slow down a video
+  #
+  # note:  presentation timestamp (PTS)
+  # 'x2' = half speed; 'x4' = quarter speed
+  
+  def slowdown(speed=:x2, show: false)
+    
+    factor = {x1_5: 1.5, x2: 2.0, x4: 4.0}[speed.to_s.sub('.','_').to_sym]
+    command = "ffmpeg -i #{@file_in} -vf \"setpts=#{factor}*PTS\" " + 
+        "#{@file_out} -y"
+    run command, show
+    
+  end    
+  
+  # speed up a video
+  #
+  # note:  presentation timestamp (PTS)
+  # 'x2' = double speed; 'x4' = quadruple speed
+  
+  def speedup(speed=:x2, show: false)
+    
+    h = {x1_5: 0.75, x2: 0.5, x4: 0.25, x6: 0.166, x8: 0.125, x16: 0.0625, 
+         x32: 0.03125, x64: 0.015625}
+    factor = h[speed.to_s.sub('.','_').to_sym]
+    command = "ffmpeg -i #{@file_in} -vf \"setpts=#{factor}*PTS\" " + 
+        "#{@file_out} -y"
+    run command, show
+    
+  end  
 
   # Transcodes avi -> mp4
   #
