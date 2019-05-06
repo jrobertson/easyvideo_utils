@@ -36,9 +36,11 @@ class EasyVideoUtils
 @commands = "
 * add_audio # add an audio track
 * add_subtitles # add subtitles from a .srt file
+* concat # concatenate 2 or more videos
 * convert # alias for transcode
 * capture # capture the desktop at 1024x768
 * play # plays the video using mplayer
+* preview # plays the video using ffplay
 * record # alias for capture
 * resize # resize to 720p
 * scale # alias for resize
@@ -82,6 +84,25 @@ class EasyVideoUtils
 
   end
   
+  # Concatenate 2 or more videos
+  #
+  # Notes:
+  # * Video must be of same format and codec
+  # * Only video with no audio is currently supported
+  #
+  def concat(files=[], show: false)
+    
+    inputs = files.map {|file| "-i #{file}"}.join(' ')
+    filter = files.map.with_index {|file,i| "[%s:v]" % i}.join(' ')
+    
+    command = "ffmpeg #{inputs} \ " + 
+    " -filter_complex \"#{filter} concat=n=#{files.length}:v=1 [v]\" \ " + 
+    " -map \"[v]\"  #{@file_out}"
+
+    run command, show
+    
+  end  
+  
   # Duration returned in seconds
   #
   def duration()
@@ -106,6 +127,11 @@ class EasyVideoUtils
     command = "mplayer #{@file_out}"
     run command, show
   end
+  
+  def preview(show: false)
+    command = "ffplay #{@file_out}"
+    run command, show
+  end  
 
   # Resize avi to 720p
   #
