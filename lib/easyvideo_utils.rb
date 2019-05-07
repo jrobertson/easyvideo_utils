@@ -20,8 +20,8 @@ module CommandHelper
       " %s %s %s" % ['*'.blue, command, desc.to_s.light_black]
     end
 
-    s = a.map {|x| format_command.call(x) }.join("\n")
-    puts s
+    puts a.map {|x| format_command.call(x) }.join("\n")
+
   end
 
   def search(s)
@@ -39,6 +39,8 @@ class EasyVideoUtils
 * concat # concatenate 2 or more videos
 * convert # alias for transcode
 * capture # capture the desktop at 1024x768
+* create_poster # Video created from audio file + static image
+* create_slideshow # Combines images to create a video. Defaults to 5 seconds per image
 * extract_images # Extracts images at 1 FPS by default
 * play # plays the video using mplayer
 * preview # plays the video using ffplay
@@ -112,7 +114,25 @@ class EasyVideoUtils
 
     run command, show
     
-  end  
+  end
+  
+  # creates a video from an audio file along with a single image file
+  #
+  def create_poster(audiox=nil, imagex=nil, image: imagex, 
+                    audio: audiox, show: false)
+    command = "ffmpeg -loop 1 -i #{image} -i #{audio} -c:v libx264 -c:a " + 
+        "aac -strict experimental -b:a 192k -shortest #{@file_out}"
+    run command, show
+  end
+
+  def create_slideshow(ext: '.jpg', image_duration: 5, show: false)
+    
+    file_mask = @file_in || "image-%03d" + ext
+    command = "ffmpeg -r 1/#{image_duration} -i #{file_mask} -c:v " + 
+        "libx264 -r 30 -pix_fmt yuv420p #{@file_out}"  
+    run command, show
+    
+  end
   
   # Duration returned in seconds
   #
