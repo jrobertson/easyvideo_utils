@@ -7,7 +7,14 @@ require 'subunit'
 
 
 # requirements:
-# `apt-get install mplayer ffmpeg vorbis-tools`exiftool
+# `apt-get install mplayer ffmpeg vorbis-tools`exiftool libav-tools
+
+# note:  Although this gem tries to be full-proof it's dependent upon the 
+#        command-line tools to do the heavy lifting, as a result is prone 
+#        to nuisance factors.
+# tip: instead of using transcode, try specifing the target encoding based on 
+#      the extension type when using multiple 
+#       operations e.g. EasyVideoUtils.new('vid2.avi', 'vid3.mp4').resize
 
 
 module CommandHelper
@@ -42,12 +49,13 @@ class EasyVideoUtils
 * create_poster # Video created from audio file + static image
 * create_slideshow # Combines images to create a video. Defaults to 5 seconds per image
 * extract_images # Extracts images at 1 FPS by default
+* grab_image # grabs a single image at 1 second in by default
 * play # plays the video using mplayer
 * preview # plays the video using ffplay
 * record # alias for capture
 * remove_audio # removes the audio track from a video
 * remove_video # removes the video track from a video. Output file would be an mp3.
-* resize # resize to 720p
+* resize # resize to 320x240 
 * scale # alias for resize
 * slowdown # slows a viedo down. Defaults to x2 (half-speed)
 * speedup # speed a video up. Defaults to x2 (twice as fast)
@@ -165,6 +173,10 @@ class EasyVideoUtils
     command = "ffmpeg -i #{@file_in} -r #{rate} -f image2 image-%2d#{ext}"
     run command, show
   end
+  
+  def grab_image(start_time=1, show: false)
+    command = "avconv -i #{@file_in} -ss #{start_time.to_s} -frames:v 1 #{@file_out}"
+  end
 
   def play(show: false)
     command = "mplayer #{@file_out}"
@@ -189,12 +201,13 @@ class EasyVideoUtils
     run command, show
   end
 
-  # Resize avi to 720p
+  # Resize e.g. to 320x240
   #
-  def resize(scale='720', show: false)
-    command = "ffmpeg -i #{@file_in} -vf scale=\"#{scale}:-1\" #{@file_out} -y"
+  def resize(scale='320x240', show: false)
+    command = "avconv -i #{@file_in} -s #{scale} #{@file_out} -y"
     run command, show
   end
+  
 
   alias scale resize
   
@@ -240,19 +253,15 @@ class EasyVideoUtils
   alias convert transcode
 
   # Trim the start and end of the video
-  # times are expressed in human time format e.g. '1m 4s', '2m 30'
+  # times can be expressed in human time format e.g. '1m 4s', '2m 30'
   #
-  def trim(start_time, end_time, show: false)
+  def trim(start_time, duration, show: false)
         
-    t1, t2 = [start_time, end_time].map do |s|
-
-      "%02d:%02d:%02d" % (s.sub(/m/,'\00s').split(/\D/).reverse + [0,0])\
-                          .take(3).reverse
-
-    end
+    t1 = "%02d:%02d:%02d" % (start_time.to_s.sub(/m/,'\00s').split(/\D/)\
+                             .reverse + [0,0]).take(3).reverse
     
-    command = "ffmpeg -i #{@file_in} -ss #{t1} -t #{t2} -async 1 " + 
-              "#{@file_out} -y"
+    command = "avconv -i #{@file_in} -ss #{t1} -t #{duration.to_s} " + 
+        "-codec copy #{@file_out}"
     run command, show
     
   end
