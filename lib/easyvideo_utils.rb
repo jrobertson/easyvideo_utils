@@ -175,7 +175,8 @@ class EasyVideoUtils
   end
   
   def grab_image(start_time=1, show: false)
-    command = "avconv -i #{@file_in} -ss #{start_time.to_s} -frames:v 1 #{@file_out}"
+    command = "avconv -i #{@file_in} -ss #{start_time.to_s} -frames:v 1 #{@file_out} -y"
+    run command, show
   end
 
   def play(show: false)
