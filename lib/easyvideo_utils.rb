@@ -4,7 +4,7 @@
 
 require 'c32'
 require 'subunit'
-
+require 'easyimg_utils' 
 
 # requirements:
 # `apt-get install mplayer ffmpeg vorbis-tools`exiftool libav-tools
@@ -57,6 +57,7 @@ class EasyVideoUtils
 * remove_video # removes the video track from a video. Output file would be an mp3.
 * resize # resize to 320x240 
 * scale # alias for resize
+* screencast # lightweight screenshot recorder -> animated gif -> mp4. see also capture
 * slowdown # slows a viedo down. Defaults to x2 (half-speed)
 * speedup # speed a video up. Defaults to x2 (twice as fast)
 * transcode # converts 1 video format to another e.g. avi-> mp4 or gif -> mp4
@@ -211,6 +212,18 @@ class EasyVideoUtils
   
 
   alias scale resize
+
+  # starts recoring after 2 seconds  for a duration of 6 seconds
+  #
+  def screencast(duration: 6, scale: 0.75, window: true)
+    
+    gif_file = @file_out.sub(/\w+$/,'gif')
+    
+    EasyImgUtils.new(out: gif_file)\
+        .screencast(duration: duration, scale: scale, window: window)
+    EasyVideoUtils.new(gif_file, @file_out).transcode
+    
+  end
   
   # slow down a video
   #
@@ -270,11 +283,13 @@ class EasyVideoUtils
   end
 
   private
-  
+
+  # see https://unix.stackexchange.com/questions/40638/how-to-do-i-convert-an-animated-gif-to-an-mp4-or-mv4-on-the-command-line
+  #
   def gif_to_mp4(show: false)
     
     command = "ffmpeg -i %s -movflags faststart -pix_fmt yuv420p \
-        -vf \"scale=trunc(iw/2)*2:trunc(ih/2)*2\" %s" % [@file_in, @file_out]    
+        -vf \"scale=trunc(iw/2)*2:trunc(ih/2)*2\" %s" % [@file_in, @file_out]
     run command, show
     
   end    
