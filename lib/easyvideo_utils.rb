@@ -59,7 +59,7 @@ class EasyVideoUtils
 * scale # alias for resize
 * slowdown # slows a viedo down. Defaults to x2 (half-speed)
 * speedup # speed a video up. Defaults to x2 (twice as fast)
-* transcode # converts 1 video format to another e.g. avi-> mp4
+* transcode # converts 1 video format to another e.g. avi-> mp4 or gif -> mp4
 * trim # trims the beginning and ending of a video in hms format e.g. 1m 3s
 ".strip.lines.map {|x| x[/(?<=\* ).*/]}.sort
 
@@ -240,11 +240,13 @@ class EasyVideoUtils
         "#{@file_out} -y"
     run command, show
     
-  end  
+  end      
 
   # Transcodes avi -> mp4
   #
   def transcode(show: false)
+    
+    return gif_to_mp4() if File.extname(@file_in) == '.gif'
     
     command = "ffmpeg -i #{@file_in} #{@file_out} -y"
     run command, show    
@@ -268,6 +270,14 @@ class EasyVideoUtils
   end
 
   private
+  
+  def gif_to_mp4(show: false)
+    
+    command = "ffmpeg -i %s -movflags faststart -pix_fmt yuv420p \
+        -vf \"scale=trunc(iw/2)*2:trunc(ih/2)*2\" %s" % [@file_in, @file_out]    
+    run command, show
+    
+  end    
 
   def run(command, show=false)
 
