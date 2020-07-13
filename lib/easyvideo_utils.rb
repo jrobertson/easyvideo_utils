@@ -7,7 +7,7 @@ require 'subunit'
 require 'easyimg_utils' 
 
 # requirements:
-# `apt-get install mplayer ffmpeg vorbis-tools`exiftool libav-tools
+# `apt-get install mplayer ffmpeg vorbis-tools exiftool libav-tools`
 
 # note:  Although this gem tries to be full-proof it's dependent upon the 
 #        command-line tools to do the heavy lifting, as a result is prone 
@@ -16,6 +16,11 @@ require 'easyimg_utils'
 #      the extension type when using multiple 
 #       operations e.g. EasyVideoUtils.new('vid2.avi', 'vid3.mp4').resize
 
+# installing youtube-dl:
+# 
+# `sudo curl -L https://yt-dl.org/downloads/latest/youtube-dl -o /usr/bin/youtube-dl`
+#
+# `sudo chmod a+rx /usr/bin/youtube-dl`
 
 module CommandHelper
   using ColouredText
@@ -49,6 +54,7 @@ class EasyVideoUtils
 * create_poster # Video created from audio file + static image
 * create_slideshow # Combines images to create a video. Defaults to 5 seconds per image
 * extract_images # Extracts images at 1 FPS by default
+* info
 * grab_image # grabs a single image at 1 second in by default
 * play # plays the video using mplayer
 * preview # plays the video using ffplay
@@ -62,6 +68,7 @@ class EasyVideoUtils
 * speedup # speed a video up. Defaults to x2 (twice as fast)
 * transcode # converts 1 video format to another e.g. avi-> mp4 or gif -> mp4
 * trim # trims the beginning and ending of a video in hms format e.g. 1m 3s
+* youtube_dl # downloads in mp4 format
 ".strip.lines.map {|x| x[/(?<=\* ).*/]}.sort
 
 
@@ -175,6 +182,11 @@ class EasyVideoUtils
     run command, show
   end
   
+  def info(show: false)
+    command = "avprobe #{@file_in}"
+    run command, show
+  end  
+  
   def grab_image(start_time=1, show: false)
     command = "avconv -i #{@file_in} -ss #{start_time.to_s} -frames:v 1 #{@file_out} -y"
     run command, show
@@ -281,6 +293,17 @@ class EasyVideoUtils
     run command, show
     
   end
+  
+  # Download a video from YouTube
+  #
+  def youtube_dl(show: false)    
+    
+    command = "youtube-dl -f 'bestvideo[ext=mp4]+" + 
+        "bestaudio[ext=m4a]/best[ext=mp4]/best' #{@file_in}"
+    command += ' -o ' + @file_out if @file_out
+    run command, show    
+
+  end  
 
   private
 
